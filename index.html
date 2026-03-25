@@ -189,7 +189,6 @@
         
         const listaResponsaveis = [...new Set(baseGeral.map(item => buscarValorInteligente(item, ["vereador", "responsavel"])))].filter(Boolean).sort();
         
-        // MUDANÇA AQUI: Popula o Datalist com os nomes em vez de um select comum
         const datalist = document.getElementById("listaResponsaveisDatalist");
         datalist.innerHTML = ''; 
         listaResponsaveis.forEach(resp => { datalist.innerHTML += `<option value="${resp}">`; });
@@ -213,7 +212,6 @@
 
         const servidores = baseGeral.filter(s => buscarValorInteligente(s, ["vereador", "responsavel"]) === responsavelSelecionado);
         
-        // Se a busca der certo (ou seja, ele selecionou/digitou um nome que de fato existe)
         if (servidores.length > 0) {
             document.getElementById("spanResponsavel").textContent = responsavelSelecionado;
 
@@ -263,7 +261,6 @@
             });
             document.getElementById("areaTabela").classList.remove("d-none");
         } else {
-            // Se ele digitar algo que não existe, a tabela apenas oculta
             document.getElementById("areaTabela").classList.add("d-none");
         }
     });
@@ -373,6 +370,13 @@
         const mesesNome = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
         const nomeMes = mesesNome[parseInt(mes) - 1].toLowerCase(); 
 
+        // Função de rodapé reutilizável
+        function drawFooter() {
+            doc.setFontSize(7); doc.setFont("helvetica", "normal");
+            const rodapeLegal = `Em conformidade com a Lei Municipal nº 16.546/2025, os Gabinetes Parlamentares devem enviar à Diretoria de Gestão de Pessoas (DGEP) da Câmara Municipal de Curitiba, para fins de registro e providências legais cabíveis, o formulário de controle de frequência do pessoal nomeado para cargos de provimento em comissão, relativo ao mês anterior.`;
+            doc.text(rodapeLegal, 14, 285, { maxWidth: 182, align: 'justify' });
+        }
+
         // INCLUSÃO DA LOGO E BARRA SEPARADORA
         let logoWidth = 35;
         let logoHeight = 15; 
@@ -427,11 +431,23 @@
                 0: { halign: 'left', fontStyle: 'bold' },
                 1: { halign: 'left', fontStyle: 'normal' },
                 2: { halign: 'left', fontStyle: 'italic', cellWidth: 30 }
+            },
+            margin: { bottom: 25 }, // MARGEM SEGURA P/ NÃO ATROPELAR O RODAPÉ
+            didDrawPage: function (data) {
+                drawFooter(); // DESENHA O RODAPÉ EM TODAS AS PÁGINAS DA TABELA
             }
         });
 
-        // RODAPÉ E ASSINATURA
+        // BLOCO DE ASSINATURA
         let finalY = doc.lastAutoTable.finalY + 8; 
+
+        // Verifica se há espaço para a assinatura na página atual (precisa de ~50mm livres)
+        // A folha A4 vai até 297mm. O rodapé está em 285mm. O limite seguro de Y é 275mm.
+        if (finalY + 50 > 275) {
+            doc.addPage();
+            finalY = 20; // Reseta Y para o topo da nova página
+            drawFooter(); // Garante que a página nova também tenha o rodapé da Lei
+        }
         
         doc.setFontSize(8); doc.setFont("helvetica", "italic");
         const textoSPAE = "*Em caso de afastamento por motivos de saúde, superior a 3 dias, enviar o atestado à Saúde Ocupacional por meio de Comunicado específico do SPAE.";
@@ -445,10 +461,6 @@
         doc.text("Assinatura do Responsável", 105, finalY + 40, { align: 'center' });
         doc.setFont("helvetica", "bold"); 
         doc.text(responsavel, 105, finalY + 45, { align: 'center' });
-
-        doc.setFontSize(7); doc.setFont("helvetica", "normal");
-        const rodapeLegal = `Em conformidade com a Lei Municipal nº 16.546/2025, os Gabinetes Parlamentares devem enviar à Diretoria de Gestão de Pessoas (DGEP) da Câmara Municipal de Curitiba, para fins de registro e providências legais cabíveis, o formulário de controle de frequência do pessoal nomeado para cargos de provimento em comissão, relativo ao mês anterior.`;
-        doc.text(rodapeLegal, 14, 285, { maxWidth: 182, align: 'justify' });
 
         doc.save(`Frequencia_${responsavel.replace(/\s+/g, '_')}_${ano}_${mes}.pdf`);
 
